@@ -4,6 +4,11 @@
 #include "Vtest.h"
 #include "verilated.h"
 #include "verilated_fst_c.h"
+#include <../nvboard.h>
+
+static TOP_NAME dut;
+
+void nvboard_bind_all_pins(TOP_NAME* top);
 
 int main(int argc, char** argv) {
     VerilatedContext* contextp = new VerilatedContext;
