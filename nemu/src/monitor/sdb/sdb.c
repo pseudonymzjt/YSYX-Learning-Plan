@@ -17,6 +17,7 @@
 #include <cpu/cpu.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <memory/vaddr.h>
 #include "sdb.h"
 
 static int is_batch_mode = false;
@@ -63,6 +64,25 @@ static int cmd_si(char *args) {
   return 0;
 }
 
+static int cmd_info_r(char *args) {
+  if(strcmp(args, "r") == 0)
+    isa_reg_display();
+  return 0;
+}
+
+static int cmd_x(char *args) {
+  int num;
+  unsigned start;
+  sscanf(args, "%d %x", &num, &start);
+  printf("%d %x\n", num, start);
+  unsigned pointer = start;
+  for(int i = 0; i < num; i++) {
+    printf("%x %d\n", pointer, vaddr_read(pointer, 4));
+    pointer += 4;
+  }
+  return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -73,7 +93,9 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-  { "si", "Continue the execution in some moves", cmd_si}
+  { "si", "Continue the execution in some moves", cmd_si },
+  { "info", "Print all value of the registers", cmd_info_r },
+  { "x", "Scan the referred memory for a specific length", cmd_x }
 
   /* TODO: Add more commands */
 
