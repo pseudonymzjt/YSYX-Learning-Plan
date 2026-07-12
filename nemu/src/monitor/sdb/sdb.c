@@ -83,6 +83,13 @@ static int cmd_x(char *args) {
   return 0;
 }
 
+static int cmd_p(char *args) {
+  _Bool success = 0;
+  printf("%d\n", expr(args, &success));
+  if(!success) printf("Something went wrong!");
+  return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -95,7 +102,8 @@ static struct {
   { "q", "Exit NEMU", cmd_q },
   { "si", "Continue the execution in some moves", cmd_si },
   { "info", "Print all value of the registers", cmd_info_r },
-  { "x", "Scan the referred memory for a specific length", cmd_x }
+  { "x", "Scan the referred memory for a specific length", cmd_x },
+  {"p", "Print out the value of an expression", cmd_p}
 
   /* TODO: Add more commands */
 
