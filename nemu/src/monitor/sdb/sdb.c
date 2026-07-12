@@ -24,6 +24,8 @@ static int is_batch_mode = false;
 
 void init_regex();
 void init_wp_pool();
+bool add_watchpoint(char *expr_str);
+bool delete_watchpoint(int no);
 
 /* We use the `readline' library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
@@ -64,9 +66,11 @@ static int cmd_si(char *args) {
   return 0;
 }
 
-static int cmd_info_r(char *args) {
+static int cmd_info(char *args) {
   if(strcmp(args, "r") == 0)
     isa_reg_display();
+  if(strcmp(args, "w") == 0)
+    watchpoint_display();
   return 0;
 }
 
@@ -90,6 +94,13 @@ static int cmd_p(char *args) {
   return 0;
 }
 
+static int cmd_d(char *args) {
+  int id = atoi(args);
+  printf("choose %d\n", id);
+  delete_watchpoint(id);
+  return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -101,9 +112,10 @@ static struct {
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
   { "si", "Continue the execution in some moves", cmd_si },
-  { "info", "Print all value of the registers", cmd_info_r },
+  { "info", "Print all value of the registers", cmd_info },
   { "x", "Scan the referred memory for a specific length", cmd_x },
-  {"p", "Print out the value of an expression", cmd_p}
+  {"p", "Print out the value of an expression", cmd_p},
+  {"d", "Delete a certain watchpoint", cmd_d}
 
   /* TODO: Add more commands */
 
