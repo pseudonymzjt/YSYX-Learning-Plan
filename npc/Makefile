@@ -1,5 +1,5 @@
 V = verilator
-VFLAGS = -cc --exe --build --trace-fst -Mdir build
+VFLAGS = -cc --exe --build --trace-fst -Mdir build -y vsrc
 
 # 默认值
 TARGET ?= test.v
