@@ -109,4 +109,19 @@ int memcmp(const void *s1, const void *s2, size_t n) {
   return 0;
 }
 
+char* strncat(char *dst, const char *src, unsigned long n) {
+  char *start = dst + strlen(dst);
+  size_t i = 0;
+  while (i < n && src[i] != '\0') {
+    start[i] = src[i];
+    i++;
+  }
+  start[i] = '\0';
+  while(i < n) {
+    start[i] = '\0';
+    i++;
+  }
+  return dst;
+}
+
 #endif
