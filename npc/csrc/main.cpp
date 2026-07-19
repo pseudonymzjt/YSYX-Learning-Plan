@@ -3,6 +3,14 @@
 #include "verilated.h"
 #include <verilated_fst_c.h> // 1. 引入 FST 头文件
 
+extern "C" void npc_trap(int code) {
+    if (code == 0) {
+        std::cout << "NPC TRAP: HIT GOOD TRAP!" << std::endl;
+    } else {
+        std::cout << "NPC TRAP: HIT BAD TRAP! Code: " << code << std::endl;
+    }
+}
+
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     Vtop* top = new Vtop;
