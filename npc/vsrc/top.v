@@ -3,17 +3,20 @@ module top(
   input rst
 );
 	import "DPI-C" function void npc_trap(int code);
+	wire is_ebreak = (inst == 32'h00100073);
 	reg [31:0] pc;
 	wire [31:0] next_pc;
 	always @(posedge clk) begin
 		if(rst) pc <= 32'h80000000;
-		else pc <= next_pc;
+		else if(!is_ebreak) pc <= next_pc;
 	end
 	reg [31:0] inst_mem [0:15];
 	initial begin
 	// 00000000 <_start>:
-		// 1. addi	a0,zero,20
-		inst_mem[0] = 32'h01400513; 
+		// // 1. addi	a0,zero,20
+		// inst_mem[0] = 32'h01400513; 
+		// 1. lui a0, 1
+		inst_mem[0] = 32'h00001537;
 		// 2. add  a0,a0,a0
 		inst_mem[1] = 32'h00a50533;
 		// 3. jalr	ra,16(zero) # 14 <fun>
@@ -40,8 +43,11 @@ module top(
 
 	// R 型指令
 	wire [6:0] funct7 = inst[31:25];
-
 	wire [4:0] rs2 = inst[24:20];
+
+	// U 型指令
+	wire [19:0] immU = inst[31:12];
+
 	// 实例化读写模块
 	reg [31:0] alu_result;
 	wire [31:0] rdata1;
@@ -54,7 +60,7 @@ module top(
 		.waddr(rd),
 		.raddr1(rs1),
 		.raddr2(rs2),
-		.wen(opcode == 7'b0010011 || opcode == 7'b1100111 || opcode == 7'b0110011),
+		.wen(opcode == 7'b0010011 || opcode == 7'b1100111 || opcode == 7'b0110011 || opcode == 7'b0110111),
 		.rdata1(rdata1),
 		.rdata2(rdata2)
 	);
@@ -74,6 +80,9 @@ module top(
 				if(funct7 == 7'b0) alu_result = rdata1 + rdata2; // add
 				else if(funct7 == 7'b0100000) alu_result = rdata1 - rdata2; // sub
 			end
+			7'b0110111: begin
+				alu_result = {immU, 12'b0}; // lui
+			end
 			default: begin
 			end
 		endcase
@@ -84,7 +93,7 @@ module top(
 	endfunction
 
 	always @(posedge clk) begin
-		if (inst == 32'h00100073) begin
+		if (is_ebreak) begin
 			npc_trap(0);
 			$finish; // 告诉仿真器可以结束了
 		end
