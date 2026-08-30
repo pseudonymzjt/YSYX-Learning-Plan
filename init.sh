@@ -69,6 +69,9 @@ case $1 in
   npc)
     addenv NPC_HOME npc
     ;;
+  riscv-tests)
+    init NJU-ProjectN/riscv-tests-am master riscv-tests-am
+    ;;
   *)
     echo "Invalid input..."
     exit
