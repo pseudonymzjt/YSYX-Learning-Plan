@@ -53,12 +53,11 @@ module top(
 			mem_rdata = 0;
 		end
 		
-		// 计算写掩码
 		case(funct3)
-			3'b000: mem_wmask = 8'b0001;  // sb
-			3'b001: mem_wmask = 8'b0011;  // sh
-			3'b010: mem_wmask = 8'b1111;  // sw
-			default: mem_wmask = 8'b0000;
+			3'b000: mem_wmask = 8'b0000_0001 << mem_addr[1:0];              // sb
+			3'b001: mem_wmask = mem_addr[1] ? 8'b0000_1100 : 8'b0000_0011; // sh
+			3'b010: mem_wmask = 8'b0000_1111;                              // sw
+			default: mem_wmask = 8'b0000_0000;
 		endcase
 	end
 
@@ -158,6 +157,9 @@ module top(
 					pc, inst, opcode, rd, rs1, rdata1, rs2, rdata2);
 	end
 
+	wire [7:0] load_byte = (mem_addr[1:0] == 2'b00) ? mem_rdata[7:0]   :
+                       (mem_addr[1:0] == 2'b01) ? mem_rdata[15:8]  :
+                       (mem_addr[1:0] == 2'b10) ? mem_rdata[23:16] : mem_rdata[31:24];
 
 	always @(*) begin
 		alu_result = 32'b0;
@@ -179,11 +181,10 @@ module top(
 			end
 			7'b0000011: begin // load
 				case(funct3) 
-					3'b000: alu_result = {{24{mem_rdata[7]}}, mem_rdata[7:0]}; // lb
-					3'b001: alu_result = {{16{mem_rdata[15]}}, mem_rdata[15:0]}; // lh
-					3'b010: alu_result = mem_rdata; // lw
-					3'b100: alu_result = {24'b0, mem_rdata[7:0]}; // lbu
-					default: alu_result = 0;
+					3'b000: alu_result = {{24{load_byte[7]}}, load_byte}; // lb
+					3'b010: alu_result = mem_rdata;                       // lw
+					3'b100: alu_result = {24'b0, load_byte};              // lbu
+					default: alu_result = 32'b0;
 				endcase
 			end
 			7'b0100011: begin // store
@@ -195,9 +196,11 @@ module top(
 	end
 
 	// store 指令写内存
+	wire [31:0] store_data = (funct3 == 3'b000) ? {4{rdata2[7:0]}} : rdata2;
+
 	always @(posedge clk) begin
 		if (mem_write_valid && !is_ebreak) begin
-			pmem_write(mem_addr, rdata2, mem_wmask);
+			pmem_write(mem_addr, store_data, mem_wmask);
 		end
 	end
 
