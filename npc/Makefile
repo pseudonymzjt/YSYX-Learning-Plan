@@ -1,9 +1,9 @@
 V = verilator
-VFLAGS = -cc --exe --build --trace-fst -Mdir build -y vsrc
+VFLAGS = -cc --exe --build --trace-fst -Mdir build -y vsrc -CFLAGS "-g"
 
 # 默认值
 TARGET ?= vsrc/top.v
-SRC ?= csrc/main.cpp
+SRC ?= csrc/main.cpp csrc/minirvemu.cpp
 DIR = build
 LIB = V$(basename $(notdir $(TARGET)))  # 自动从TARGET提取LIB名
 IMG ?= ../am-kernels/tests/cpu-tests/build/dummy-minirv-npc.bin

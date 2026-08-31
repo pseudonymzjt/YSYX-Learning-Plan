@@ -8,6 +8,14 @@ module RegisterFile #(ADDR_WIDTH = 5, DATA_WIDTH = 32) (
   output [DATA_WIDTH-1:0] rdata1,
   output [DATA_WIDTH-1:0] rdata2
 );
+  import "DPI-C" function void set_gpr_val(input int idx, input int val);
+
+  always @(*) begin
+      for (int i = 0; i < 32; i = i + 1) begin
+          set_gpr_val(i, rf[i]);
+      end
+  end
+    
   reg [DATA_WIDTH-1:0] rf [2**ADDR_WIDTH-1:0];
   always @(posedge clk) begin
     if (wen && (waddr != 0)) begin

@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <cstdint>
 #include <cassert>
+#include "minirvemu.h"
+#include <svdpi.h>
 
 bool sim_done;
 int exit_code;
@@ -20,6 +22,16 @@ extern "C" void npc_trap(int code, int pc) {
     sim_done = true;
     exit_code = code;
 }
+
+uint32_t npc_gpr[32] = {0};
+
+extern "C" void set_gpr_val(int idx, int val) {
+    if (idx >= 0 && idx < 32) {
+        npc_gpr[idx] = (uint32_t)val;
+    }
+}
+
+uint32_t npc_pc = 0;
 
 // 简单的内存模拟（128MB）
 uint8_t pmem[PMEM_SIZE];
@@ -85,11 +97,49 @@ extern "C" void pmem_write(int waddr, int wdata, char wmask) {
     }
 }
 
+bool check_difftest() {
+    if (npc_pc != minirvemu_get_pc()) {
+        printf("[DiffTest ERROR] PC 不一致!\n");
+        printf("NPC PC = 0x%08x, REF PC = 0x%08x\n", npc_pc, minirvemu_get_pc());
+        return false;
+    }
+
+    for (int i = 0; i < 32; i++) {
+        uint32_t npc_reg = (uint32_t)npc_gpr[i];
+        uint32_t minirvemu_reg = (uint32_t)minirvemu_get_reg(i);
+        if (npc_reg != minirvemu_reg) {
+            printf("[DiffTest ERROR] 寄存器 x%d 不一致!\n", i);
+            printf("当前 PC: 0x%08x\n", npc_pc);
+            printf("NPC 结果: 0x%08x\n", npc_reg);
+            printf("REF 结果: 0x%08x\n", minirvemu_reg);
+            return false;
+        }
+    }
+    return true;
+}
+
+void npc_step_instruction(Vtop* top, VerilatedFstC* tfp, int &sim_time) {
+    // 1. 低电平阶段
+    top->clk = 0;
+    top->eval();
+    if (tfp) tfp->dump(sim_time++);
+
+    // 2. 高电平阶段
+    top->clk = 1;
+    top->eval();
+    if (tfp) tfp->dump(sim_time++);
+}
+
 int main(int argc, char** argv) {
     if(argc > 1) {
         load_image(argv[1]);
+        minirvemu_init(argv[1]);
     }
-    else load_image("../am-kernels/tests/cpu-tests/build/dummy-minirv-npc.bin");
+    else {
+        load_image("../am-kernels/tests/cpu-tests/build/dummy-minirv-npc.bin");
+        minirvemu_init("../am-kernels/tests/cpu-tests/build/dummy-minirv-npc.bin");
+    }
+    
     Verilated::commandArgs(argc, argv);
     Vtop* top = new Vtop;
 
@@ -101,11 +151,22 @@ int main(int argc, char** argv) {
 
     int sim_time = 0;
     while (!sim_done) {
-        top->clk = !top->clk;
-        top->eval();
-        
-        tfp->dump(sim_time); // 像以前一样写入波形
-        sim_time++;
+        // NPC 硬件前进一步（时钟翻转，直到一条指令执行结束）
+        npc_step_instruction(top, tfp, sim_time);
+        printf("complete one step in npc\n");
+        npc_pc = top->pc_out;
+        printf("update pc for 0x%08x\n", npc_pc);
+
+        // 软件模拟器 REF 前进一条指令
+        minirvemu_step();
+        printf("complete one step in minirvemu\n");
+
+        // 对比两者状态
+        if (!check_difftest()) {
+            // 发现了分歧！返回非 0 值，让 make 捕捉到 FAIL
+            printf("DiffTest 发现错误，仿真终止！\n");
+            return 1;
+        }
     }
 
     tfp->close();
