@@ -129,12 +129,15 @@ void minirvemu_step() {
         // SW / SB 指令 (S 型 Store)
         case 0x23: {
             uint32_t addr = ref_R[rs1] + imm_s;
-            if (funct3 == 2) {        // sw (4 字节)
-                mem_write(addr, ref_R[rs2], 4);
-            } else if (funct3 == 0) { // sb (1 字节)
-                mem_write(addr, ref_R[rs2] & 0xff, 1);
-            } else {
-                goto unhandled;
+            if (addr == 0x10000000) {}
+            else {
+                if (funct3 == 2) {        // sw (4 字节)
+                    mem_write(addr, ref_R[rs2], 4);
+                } else if (funct3 == 0) { // sb (1 字节)
+                    mem_write(addr, ref_R[rs2] & 0xff, 1);
+                } else {
+                    goto unhandled;
+                }
             }
             break;
         }

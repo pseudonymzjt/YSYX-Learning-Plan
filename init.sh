@@ -72,6 +72,9 @@ case $1 in
   riscv-tests)
     init NJU-ProjectN/riscv-tests-am master riscv-tests-am
     ;;
+  archbench)
+    init OSCPU/archbench main archbench true ARCHBENCH_HOME
+    ;;
   *)
     echo "Invalid input..."
     exit

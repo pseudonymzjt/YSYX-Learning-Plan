@@ -153,11 +153,11 @@ module top(
 	wire [11:0] immS = {inst[31:25], inst[11:7]};
 
 	// 调试
-	always @(posedge clk) begin
-		if (!is_ebreak)
-			$display("PC=%h, inst=%h, opcode=%b, rd=%d, rs1=%d(=%h), rs2=%d(=%h)", 
-					pc, inst, opcode, rd, rs1, rdata1, rs2, rdata2);
-	end
+	// always @(posedge clk) begin
+	//	if (!is_ebreak)
+	//		$display("PC=%h, inst=%h, opcode=%b, rd=%d, rs1=%d(=%h), rs2=%d(=%h)", 
+	//				pc, inst, opcode, rd, rs1, rdata1, rs2, rdata2);
+	// end
 
 	wire [7:0] load_byte = (mem_addr[1:0] == 2'b00) ? mem_rdata[7:0]   :
                        (mem_addr[1:0] == 2'b01) ? mem_rdata[15:8]  :

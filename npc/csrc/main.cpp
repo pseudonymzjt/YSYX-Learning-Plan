@@ -76,17 +76,22 @@ extern "C" int pmem_read(int raddr) {
     // 小端序读取 4 字节
     uint32_t data = *(uint32_t *)(pmem + offset);
     
-    printf("pmem_read: addr=0x%x, data=0x%x\n", addr, data);
+    // printf("pmem_read: addr=0x%x, data=0x%x\n", addr, data);
     return data;
 }
 
 extern "C" void pmem_write(int waddr, int wdata, char wmask) {
+    if (waddr == 0x10000000) {  // 写入UART
+        fputc(wdata & 0xff, stderr);   // 在stdio.h中定义
+        return;
+    }
+
     // 4 字节对齐写入
     uint32_t addr = waddr & ~0x3u;
     uint32_t offset = guest_to_host(addr);
     
-    printf("pmem_write: addr=0x%x, data=0x%x, mask=0x%x\n", 
-           addr, wdata, (uint8_t)wmask);
+    // printf("pmem_write: addr=0x%x, data=0x%x, mask=0x%x\n", 
+    //       addr, wdata, (uint8_t)wmask);
     
     // 按照 wmask 写入对应字节
     uint8_t *ptr = pmem + offset;
@@ -153,13 +158,13 @@ int main(int argc, char** argv) {
     while (!sim_done) {
         // NPC 硬件前进一步（时钟翻转，直到一条指令执行结束）
         npc_step_instruction(top, tfp, sim_time);
-        printf("complete one step in npc\n");
+        // printf("complete one step in npc\n");
         npc_pc = top->pc_out;
-        printf("update pc for 0x%08x\n", npc_pc);
+        // printf("update pc for 0x%08x\n", npc_pc);
 
         // 软件模拟器 REF 前进一条指令
         minirvemu_step();
-        printf("complete one step in minirvemu\n");
+        // printf("complete one step in minirvemu\n");
 
         // 对比两者状态
         if (!check_difftest()) {
@@ -167,6 +172,7 @@ int main(int argc, char** argv) {
             printf("DiffTest 发现错误，仿真终止！\n");
             return 1;
         }
+        // if(sim_time % 1000 == 0) printf("sim_time: %d\n", sim_time);
     }
 
     tfp->close();
