@@ -13,6 +13,10 @@ static const char mainargs[MAINARGS_MAX_LEN] = TOSTRING(MAINARGS_PLACEHOLDER); /
 
 void putch(char c) {
   volatile char *p = (volatile char *)0x10000000ul;
+  volatile uint32_t *stat = (volatile uint32_t *)0x10000004ul;
+
+  while(*stat == 0);
+  
   *p = c;
 }
 

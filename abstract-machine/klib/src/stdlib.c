@@ -42,4 +42,24 @@ void *malloc(size_t size) {
 void free(void *ptr) {
 }
 
+void *calloc(size_t nmemb, size_t size) {
+  size_t total = nmemb * size;
+  void *p = malloc(total);
+  if (p) {
+    memset(p, 0, total);
+  }
+  return p;
+}
+
+void *realloc(void *ptr, size_t size) {
+  if (ptr == NULL) return malloc(size);
+  if (size == 0) { free(ptr); return NULL; }
+  void *new_ptr = malloc(size);
+  if (new_ptr) {
+    memcpy(new_ptr, ptr, size); // 简单拷贝
+    free(ptr);
+  }
+  return new_ptr;
+}
+
 #endif

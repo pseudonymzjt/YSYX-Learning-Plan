@@ -2,6 +2,7 @@
 #define __MINIRVEMU_H__
 
 #include <stdint.h>
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,6 +17,8 @@ void minirvemu_step();
 // 供 NPC 读取它的 PC 和 32 个寄存器
 uint32_t minirvemu_get_pc();
 uint32_t minirvemu_get_reg(int idx);
+
+void minirvemu_set_gpr(int rd, uint32_t val);
 
 #ifdef __cplusplus
 }

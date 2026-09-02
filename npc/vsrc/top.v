@@ -1,9 +1,11 @@
 module top(
   input clk,
   input rst,
-  output [31:0] pc_out
+  output [31:0] pc_out,
+  output [31:0] inst_out
 );
 	assign pc_out = pc;
+	assign inst_out = inst;
 	import "DPI-C" function void npc_trap(int code, int pc);
 	import "DPI-C" function int pmem_read(input int raddr);
 	import "DPI-C" function void pmem_write(

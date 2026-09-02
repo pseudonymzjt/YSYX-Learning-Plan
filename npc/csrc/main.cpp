@@ -9,6 +9,23 @@
 #include <cassert>
 #include "minirvemu.h"
 #include <svdpi.h>
+#include <sys/time.h>
+
+
+static uint64_t boot_time = 0;
+uint64_t g_current_time = 0;
+
+// 获取从仿真开始经过的微秒数 (us)
+uint64_t get_time() {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    uint64_t us = (uint64_t)now.tv_sec * 1000000 + now.tv_usec;
+    if (boot_time == 0) {
+        boot_time = us; // 记录启动时刻
+    }
+    g_current_time = us - boot_time;
+    return g_current_time;
+}
 
 bool sim_done;
 int exit_code;
@@ -29,6 +46,10 @@ extern "C" void set_gpr_val(int idx, int val) {
     if (idx >= 0 && idx < 32) {
         npc_gpr[idx] = (uint32_t)val;
     }
+}
+
+static inline int get_inst_rd(uint32_t inst) {
+    return (inst >> 7) & 0x1f;
 }
 
 uint32_t npc_pc = 0;
@@ -68,7 +89,36 @@ static inline uint32_t guest_to_host(uint32_t paddr) {
     return paddr - 0x80000000;  // RISC-V 从 0x80000000 开始
 }
 
+bool is_load_uart_stat = false;
+uint32_t uart_stat_val = 0;
+
 extern "C" int pmem_read(int raddr) {
+    if (raddr == 0x10000004) {  // 读出UART状态
+        is_load_uart_stat = true;
+        uart_stat_val = (rand() & 0x7) == 0 ? 1 : 0; // 就绪概率为12.5%
+        return uart_stat_val;
+    }
+    if (raddr == 0x20000000 || raddr == 0x20000004) {
+        // 读出时钟的低32位
+        if (raddr == 0x20000000) { 
+            g_current_time = get_time(); 
+            // printf("[DEBUG] 成功访问了 RTC 时钟地址!, current: %lx\n", g_current_time); 
+            return g_current_time & 0xffffffff; 
+        }
+        // 读出时钟的高32位
+        else { return g_current_time >> 32; }
+    }
+    else if (raddr >= 0x20000010 && raddr <= 0x20000024) {
+        time_t now = time(NULL);
+        struct tm *t = gmtime(&now); // 或 localtime(&now)
+        if (raddr == 0x20000010) return t->tm_year + 1900;
+        if (raddr == 0x20000014) return t->tm_mon + 1;
+        if (raddr == 0x20000018) return t->tm_mday;
+        if (raddr == 0x2000001c) return t->tm_hour;
+        if (raddr == 0x20000020) return t->tm_min;
+        if (raddr == 0x20000024) return t->tm_sec;
+    }
+
     // 4 字节对齐读取
     uint32_t addr = raddr & ~0x3u;
     uint32_t offset = guest_to_host(addr);
@@ -156,23 +206,18 @@ int main(int argc, char** argv) {
 
     int sim_time = 0;
     while (!sim_done) {
-        // NPC 硬件前进一步（时钟翻转，直到一条指令执行结束）
+        // NPC 硬件前进一步
         npc_step_instruction(top, tfp, sim_time);
-        // printf("complete one step in npc\n");
         npc_pc = top->pc_out;
-        // printf("update pc for 0x%08x\n", npc_pc);
 
         // 软件模拟器 REF 前进一条指令
         minirvemu_step();
-        // printf("complete one step in minirvemu\n");
 
         // 对比两者状态
         if (!check_difftest()) {
-            // 发现了分歧！返回非 0 值，让 make 捕捉到 FAIL
             printf("DiffTest 发现错误，仿真终止！\n");
             return 1;
         }
-        // if(sim_time % 1000 == 0) printf("sim_time: %d\n", sim_time);
     }
 
     tfp->close();

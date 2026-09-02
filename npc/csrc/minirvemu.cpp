@@ -10,8 +10,31 @@ static uint8_t  ref_M[MEM_SIZE];
 static uint32_t ref_R[32];
 static uint32_t ref_pc = RESET_VECTOR;
 
+extern uint32_t uart_stat_val;
+extern uint64_t g_current_time;
+
 /* 内存读写辅助函数 */
 static inline uint32_t mem_read(uint32_t addr, int len) {
+    if (addr == 0x10000004) {
+        return uart_stat_val;
+    }
+    if (addr == 0x20000000) {
+        // printf("[minirvEMU] [DEBUG] 成功访问了 RTC 时钟地址!, current: %lx\n", g_current_time);
+        return (g_current_time & 0xffffffff);
+    }
+    if (addr == 0x20000004) return (g_current_time >> 32);
+
+    if (addr >= 0x20000010 && addr <= 0x20000024) {
+        time_t now = time(NULL);
+        struct tm *t = gmtime(&now); // 或 localtime(&now)
+        if (addr == 0x20000010) return t->tm_year + 1900;
+        if (addr == 0x20000014) return t->tm_mon + 1;
+        if (addr == 0x20000018) return t->tm_mday;
+        if (addr == 0x2000001c) return t->tm_hour;
+        if (addr == 0x20000020) return t->tm_min;
+        if (addr == 0x20000024) return t->tm_sec;
+    }
+
     uint32_t offset = addr - RESET_VECTOR;
     if (offset >= MEM_SIZE) {
         printf("[minirvEMU] 读内存越界! addr=0x%08x\n", addr);
@@ -173,4 +196,10 @@ uint32_t minirvemu_get_pc() {
 uint32_t minirvemu_get_reg(int idx) {
     if (idx < 0 || idx >= 32) return 0;
     return ref_R[idx];
+}
+
+void minirvemu_set_gpr(int rd, uint32_t val) {
+    if (rd != 0) { // x0 恒为 0
+        ref_R[rd] = val;
+    }
 }
